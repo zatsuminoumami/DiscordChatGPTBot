@@ -3,7 +3,7 @@ use serenity::{
     model::{
         gateway::Ready,
         interactions::{
-            application_command::{ApplicationCommand, ApplicationCommandInteraction},
+            application_command::{ApplicationCommand},
             Interaction, InteractionResponseType,
         },
     },
@@ -100,22 +100,11 @@ async fn main() {
     let token = env::var("DISCORD_TOKEN")
         .expect("`.env`にDISCORD_TOKENを設定してください");
     let intents = GatewayIntents::GUILD_MESSAGES | GatewayIntents::DIRECT_MESSAGES;
-    let mut client = ClientBuilder::new(&token, intents)
+    let mut client = serenity::Client::builder(&token, intents)
         .event_handler(Handler)
         .await
         .expect("Botクライアントの作成に失敗しました");
     if let Err(e) = client.start().await {
         eprintln!("Bot起動エラー: {:?}", e);
-    }
-}
-
-use serenity::model::interactions::Interaction;
-
-#[async_trait]
-impl EventHandler for Handler {
-    async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
-        if let Interaction::ApplicationCommand(cmd) = interaction {
-            // スラッシュコマンドの処理
-        }
     }
 }
