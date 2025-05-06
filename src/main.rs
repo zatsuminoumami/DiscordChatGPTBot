@@ -65,33 +65,84 @@ impl EventHandler for Handler {
 
 // OpenAI とのやり取り構造体
 #[derive(Serialize)]
-struct ChatGPTRequest { model: String, messages: Vec<ChatMessage> }
+struct ChatGPTRequest {
+    model: String,
+    messages: Vec<ChatMessage>,
+}
+
 #[derive(Serialize)]
-struct ChatMessage { role: String, content: String }
+struct ChatMessage {
+    role: String,
+    content: String,
+}
+
 #[derive(Deserialize)]
-struct ChatGPTResponse { choices: Vec<Choice> }
+#[serde(untagged)]
+enum ChatGPTApiResponse {
+    Success(ChatGPTResponse),
+    Error(OpenAIErrorWrapper),
+}
+
 #[derive(Deserialize)]
-struct Choice { message: ChatMessageContent }
+struct ChatGPTResponse {
+    choices: Vec<Choice>,
+}
+
 #[derive(Deserialize)]
-struct ChatMessageContent { content: String }
+struct Choice {
+    message: ChatMessageContent,
+}
+
+#[derive(Deserialize)]
+struct ChatMessageContent {
+    content: String,
+}
+
+#[derive(Deserialize)]
+struct OpenAIErrorWrapper {
+    error: OpenAIError,
+}
+
+#[derive(Deserialize)]
+struct OpenAIError {
+    message: String,
+    #[serde(default)]
+    r#type: Option<String>,
+    #[serde(default)]
+    code: Option<String>,
+}
 
 async fn get_chatgpt_response(prompt: &str) -> Result<String, Box<dyn std::error::Error>> {
     let api_key = env::var("OPENAI_API_KEY")?;
     let client = Client::new();
     let req = ChatGPTRequest {
         model: "gpt-3.5-turbo".to_string(),
-        messages: vec![ ChatMessage { role: "user".into(), content: prompt.into() } ],
+        messages: vec![ChatMessage {
+            role: "user".into(),
+            content: prompt.into(),
+        }],
     };
+
     let res = client
         .post("https://api.openai.com/v1/chat/completions")
         .bearer_auth(api_key)
         .json(&req)
         .send()
         .await?;
-    let body: ChatGPTResponse = res.json().await?;
-    Ok(body.choices.get(0)
-        .map(|c| c.message.content.clone())
-        .unwrap_or_else(|| "応答がありませんでした".into()))
+
+    let text = res.text().await?;
+
+    // どちらの形式か判定して処理
+    match serde_json::from_str::<ChatGPTApiResponse>(&text)? {
+        ChatGPTApiResponse::Success(body) => {
+            Ok(body.choices.get(0)
+                .map(|c| c.message.content.clone())
+                .unwrap_or_else(|| "応答がありませんでした".into()))
+        }
+        ChatGPTApiResponse::Error(e) => {
+            Err(format!("OpenAIエラー: {}", e.error.message).into())
+        }
+    }
 }
 
 #[tokio::main]
