@@ -4,31 +4,41 @@
 Rust と Serenity を使い、Discord のスラッシュコマンド `/ask` で ChatGPT API に質問できる Bot です。  
 Docker コンテナ化済みで、どこでも同じ環境で動かせます。
 
+- Rust製（安全・高速）
+- Dockerでどこでも起動可能
+- スラッシュコマンド自動登録
+- `.env` による簡易設定
+
 ---
 
-## 準備
+## セットアップ
 
 1. リポジトリをクローン  
    ```bash
-   git clone https://github.com/your-org/discord_chatgpt_bot.git
-   cd discord_chatgpt_bot
+   git@github.com:zatsuminoumami/DiscordChatGPTBot.git
    ```
 
 2. 環境変数を設定（.env ファイルを作成）
     ```bash
-    DISCORD_TOKEN=あなたのDiscordBotトークン
-    OPENAI_API_KEY=あなたのOpenAI APIキー
+    DISCORD_TOKEN=xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxx
     ```
+このファイルは Docker 起動時に自動読み込みされます。
 
 3. 必要ライブラリインストール
     Rust ツールチェインが入っていれば特別な準備不要です。
 
 ## ローカル実行
-
+ビルド＆起動
 ```bash
 cargo run --release
 ```
-Bot が起動し、スラッシュコマンド /ask を Discord 上に登録します（反映に数分かかる場合あり）。
+起動後、以下のログが表示されれば成功です。
+```bash
+chatGPTbot is connected!
+スラッシュコマンド `/ask` を登録しました。
+```
+スラッシュコマンドが反映されるまで数分かかることがあります。
 
 ## Docker 実行
 
@@ -39,12 +49,15 @@ docker build -t discord_chatgpt_bot:latest .
 
 2. コンテナ起動
 ```bash
-docker run -d \
-  -e DISCORD_TOKEN=あなたのDiscordBotトークン \
-  -e OPENAI_API_KEY=あなたのOpenAI APIキー \
-  --name chatgpt_bot \
-  discord_chatgpt_bot:latest
-  ```
+docker run -d --env-file .env --name gpt-bot chatgpt-discord-bot
+```
+
+3. ログを確認
+```bash
+docker logs -f gpt-bot
+```
+正常に起動すれば、Discord側で /ask が使えるようになります。
+
 ## カスタマイズ例
 - コマンドやレスポンスのロギング
 - 会話履歴をDB（SQLite/PostgreSQL）に保存
